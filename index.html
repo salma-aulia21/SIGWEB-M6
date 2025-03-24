@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Landmark di Indonesia</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .container {
+            display: flex;
+            height: 90vh;
+        }
+        #sidebar {
+            width: 300px;
+            min-width: 200px;
+            max-width: 500px;
+            background: #f8f9fa;
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #ccc;
+            resize: horizontal;
+            display: flex;
+            flex-direction: column;
+        }
+        #map {
+            flex: 1;
+        }
+
+        /* ✅ FIX: Search Bar lebih elegan dan responsif */
+        .search-container {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .search-container input {
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            padding: 5px;
+            width: 100%;
+        }
+
+        .search-container img {
+            width: 20px;
+            opacity: 0.7;
+        }
+
+        h3 {
+            margin-top: 10px;
+            color: #007bff;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px;
+            cursor: pointer;
+            color: #007bff;
+            border-bottom: 1px solid #ddd;
+        }
+        li:hover {
+            background: #e3f2fd;
+        }
+    </style>
+</head>
+<body>
+
+    <header>PETA LANDMARK DI INDONESIA</header>
+
+    <div class="container">
+        <div id="sidebar">
+            <!-- ✅ FIX: Search Bar Lebih Baik -->
+            <div class="search-container">
+                <input type="text" id="search" placeholder="Cari landmark atau provinsi..." onkeyup="filterLandmarks()">
+                <img src="https://cdn-icons-png.flaticon.com/512/482/482631.png" alt="🔍">
+            </div>
+            <div id="landmark-list"></div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script>
+        // ✅ Inisialisasi peta
+        var map = L.map('map').setView([-2.5489, 118.0149], 5);
+
+        // ✅ Tambahkan tile layer dari OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // ✅ Data landmark (4 contoh provinsi)
+        var landmarks = {
+            "Aceh": { name: "Masjid Raya Baiturrahman", lat: 5.5549, lng: 95.3171, year: 1879, 
+                      address: "Jl. Moh. Jam No.1, Banda Aceh", 
+                      img: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Baiturrahman_Grand_Mosque.jpg",
+                      link: "https://id.wikipedia.org/wiki/Masjid_Raya_Baiturrahman",
+                      desc: "Masjid bersejarah di Banda Aceh yang menjadi ikon budaya Islam di Indonesia." },
+            "Sumatera Utara": { name: "Istana Maimun", lat: 3.5733, lng: 98.6842, year: 1891,
+                      address: "Jl. Brigjend Katamso No.66, Medan",
+                      img: "https://upload.wikimedia.org/wikipedia/commons/e/e7/Istana_Maimun.jpg",
+                      link: "https://id.wikipedia.org/wiki/Istana_Maimun",
+                      desc: "Istana Kesultanan Deli yang memiliki arsitektur khas Melayu dengan pengaruh Eropa dan Timur Tengah." },
+            "DKI Jakarta": { name: "Monumen Nasional (Monas)", lat: -6.1754, lng: 106.8272, year: 1961,
+                      address: "Gambir, Jakarta Pusat",
+                      img: "https://upload.wikimedia.org/wikipedia/commons/5/5d/National_Monument%2C_Jakarta.jpg",
+                      link: "https://id.wikipedia.org/wiki/Monumen_Nasional",
+                      desc: "Monumen peringatan perjuangan kemerdekaan Indonesia dengan puncak emas di Jakarta." },
+            "Jawa Timur": { name: "Jembatan Suramadu", lat: -7.1919, lng: 112.8093, year: 2009,
+                      address: "Selat Madura, Jawa Timur",
+                      img: "https://upload.wikimedia.org/wikipedia/commons/7/7e/Suramadu_Bridge.jpg",
+                      link: "https://id.wikipedia.org/wiki/Jembatan_Suramadu",
+                      desc: "Jembatan penghubung antara Pulau Jawa dan Madura, terpanjang di Indonesia." }
+        };
+
+        // ✅ Tambahkan marker ke peta
+        var markers = {};
+        for (let province in landmarks) {
+            let landmark = landmarks[province];
+
+            let customIcon = L.icon({
+                iconUrl: "https://cdn-icons-png.flaticon.com/512/3194/3194044.png",
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40]
+            });
+
+            markers[province] = L.marker([landmark.lat, landmark.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(`
+                    <b>${landmark.name}</b><br>
+                    <img src="${landmark.img}" alt="${landmark.name}" width="200"><br>
+                    <b>Deskripsi:</b> ${landmark.desc}<br>
+                    <b>Tahun Berdiri:</b> ${landmark.year}<br>
+                    <b>Alamat:</b> ${landmark.address}<br>
+                    <a href="${landmark.link}" target="_blank">Baca selengkapnya</a>
+                `);
+        }
+
+        // ✅ Tampilkan daftar provinsi di sidebar
+        let sidebarList = document.getElementById('landmark-list');
+        for (let province in landmarks) {
+            let landmark = landmarks[province];
+            let listItem = document.createElement('li');
+            listItem.innerHTML = `${province} - <b>${landmark.name}</b>`;
+            listItem.onclick = function() { goToLandmark(province); };
+            sidebarList.appendChild(listItem);
+        }
+
+        // ✅ Fungsi pencarian yang lebih smooth
+        function filterLandmarks() {
+            let searchText = document.getElementById("search").value.toLowerCase();
+            document.querySelectorAll("#landmark-list li").forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(searchText) ? "" : "none";
+            });
+        }
+
+        // ✅ Fungsi navigasi ke landmark tertentu
+        function goToLandmark(province) {
+            if (markers[province]) {
+                map.setView(markers[province].getLatLng(), 10);
+                markers[province].openPopup();
+            }
+        }
+    </script>
+
+</body>
+</html>
